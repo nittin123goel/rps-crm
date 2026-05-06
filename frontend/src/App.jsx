@@ -11,30 +11,49 @@ import Users from './pages/Users.jsx';
 import Layout from './components/Layout.jsx';
 
 export default function App() {
-  const [user, setUser] = useState(undefined); // undefined = loading
+  const [user, setUser] = useState(undefined);
 
   useEffect(() => {
     let active = true;
+    let timer = setTimeout(() => { if (active) { console.warn('Auth check timed out'); setUser(null); } }, 8000);
+
     async function load() {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { if (active) setUser(null); return; }
-      try { const me = await api('/api/users/me'); if (active) setUser(me); }
-      catch { if (active) setUser(null); }
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) throw error;
+        if (!session) { clearTimeout(timer); if (active) setUser(null); return; }
+        const me = await api('/api/users/me');
+        clearTimeout(timer);
+        if (active) setUser(me);
+      } catch (e) {
+        console.error('Auth load failed:', e.message);
+        clearTimeout(timer);
+        try { await supabase.auth.signOut(); } catch {}
+        if (active) setUser(null);
+      }
     }
     load();
-    const { data: sub } = supabase.auth.onAuthStateChange(() => load());
-    return () => { active = false; sub.subscription.unsubscribe(); };
+
+    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') { setUser(null); return; }
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') load();
+    });
+    return () => { active = false; clearTimeout(timer); sub.subscription.unsubscribe(); };
   }, []);
 
-  if (user === undefined) return <div className="p-10 text-slate-500">Loading…</div>;
+  if (user === undefined) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center text-slate-500">
+        <div className="text-sm">Loading…</div>
+        <div className="text-xs text-slate-400 mt-2">If this persists for 10+ seconds, the backend may be waking up.</div>
+      </div>
+    );
+  }
 
   return (
     <Routes>
-      {/* PUBLIC */}
       <Route path="/apply/:slug" element={<PublicApply />} />
       <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
-
-      {/* AUTHENTICATED */}
       <Route element={user ? <Layout user={user} /> : <Navigate to="/login" />}>
         <Route path="/" element={<Dashboard user={user} />} />
         <Route path="/applications/:id" element={<ApplicationEdit user={user} />} />
