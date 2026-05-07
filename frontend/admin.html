@@ -7,6 +7,9 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
 <style>
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
   .tab-active { border-bottom: 2px solid #4f46e5; color: #4f46e5; font-weight: 600; }
@@ -149,14 +152,15 @@
         </div>
         <div class="flex gap-2">
           <button id="saveAppBtn" class="bg-slate-200 hover:bg-slate-300 text-slate-800 px-4 py-2 rounded-lg text-sm">Save</button>
+          <button id="downloadZipBtn" class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-medium">📦 Download ZIP</button>
           <button id="finalizeBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium">Mark Complete</button>
-          <button id="exportSingleBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium">⬇ Export</button>
+          <button id="exportSingleBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium">⬇ Export Farvision</button>
         </div>
       </div>
       <div class="border-b border-slate-200 mb-6 flex gap-6 text-sm">
         <button data-edittab="project" class="edit-tab tab-active py-2">1. Project & Unit</button>
-        <button data-edittab="applicants" class="edit-tab text-slate-500 py-2">2. Applicants</button>
-        <button data-edittab="address" class="edit-tab text-slate-500 py-2">3. Address & Contact</button>
+        <button data-edittab="applicants" class="edit-tab text-slate-500 py-2">2. Applicants &amp; Addresses</button>
+        <button data-edittab="address" class="edit-tab text-slate-500 py-2">3. Contact</button>
         <button data-edittab="payment" class="edit-tab text-slate-500 py-2">4. Payment</button>
       </div>
 
@@ -178,27 +182,16 @@
         <button id="addApplicantBtn" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium mt-3">+ Add Co-Applicant</button>
       </div>
 
-      <div id="editTab-address" class="edit-tab-panel hidden bg-white rounded-xl border border-slate-200 p-6 grid grid-cols-2 gap-4">
-        <div class="col-span-2"><label class="block text-xs font-medium text-slate-600 mb-1">Address Line 1</label>
-          <input data-field="addr_line1" class="appField w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" /></div>
-        <div><label class="block text-xs font-medium text-slate-600 mb-1">Address Line 2</label>
-          <input data-field="addr_line2" class="appField w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" /></div>
-        <div><label class="block text-xs font-medium text-slate-600 mb-1">Address Line 3</label>
-          <input data-field="addr_line3" class="appField w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" /></div>
-        <div><label class="block text-xs font-medium text-slate-600 mb-1">City</label>
-          <input data-field="city" class="appField w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" /></div>
-        <div><label class="block text-xs font-medium text-slate-600 mb-1">State</label>
-          <input data-field="state" class="appField w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" /></div>
-        <div><label class="block text-xs font-medium text-slate-600 mb-1">Postal Code</label>
-          <input data-field="postal_code" class="appField w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" /></div>
-        <div><label class="block text-xs font-medium text-slate-600 mb-1">Country</label>
-          <input data-field="country" class="appField w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" /></div>
-        <div><label class="block text-xs font-medium text-slate-600 mb-1">Mobile *</label>
-          <input data-field="mobile" class="appField w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" /></div>
-        <div><label class="block text-xs font-medium text-slate-600 mb-1">Email</label>
-          <input data-field="email" type="email" class="appField w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" /></div>
-        <div><label class="block text-xs font-medium text-slate-600 mb-1">Phone</label>
-          <input data-field="phone" class="appField w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" /></div>
+      <div id="editTab-address" class="edit-tab-panel hidden bg-white rounded-xl border border-slate-200 p-6">
+        <p class="text-xs text-slate-500 mb-4">Contact details for reaching the applicants. Address details are captured per applicant in the Applicants tab.</p>
+        <div class="grid grid-cols-3 gap-4">
+          <div><label class="block text-xs font-medium text-slate-600 mb-1">Mobile *</label>
+            <input data-field="mobile" class="appField w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" /></div>
+          <div><label class="block text-xs font-medium text-slate-600 mb-1">Email</label>
+            <input data-field="email" type="email" class="appField w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" /></div>
+          <div><label class="block text-xs font-medium text-slate-600 mb-1">Phone (Landline)</label>
+            <input data-field="phone" class="appField w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" /></div>
+        </div>
       </div>
 
       <div id="editTab-payment" class="edit-tab-panel hidden bg-white rounded-xl border border-slate-200 p-6 grid grid-cols-2 gap-4">
@@ -599,7 +592,17 @@ async function openEdit(id) {
 }
 
 function blankApplicant(seq) {
-  return { is_primary: seq === 1, display_seq: seq, salutation: 'Mr.', first_name: '', middle_name: '', last_name: '', dob: '', gender: '', relationship: 'S/o', relative_name: '', pan: '', aadhar: '' };
+  return {
+    is_primary: seq === 1, display_seq: seq,
+    salutation: 'Mr.', first_name: '', middle_name: '', last_name: '',
+    dob: '', gender: '', relationship: 'S/o', relative_name: '',
+    pan: '', aadhar: '',
+    perm_addr_line1: '', perm_addr_line2: '', perm_addr_line3: '',
+    perm_city: '', perm_state: '', perm_postal_code: '', perm_country: 'India',
+    corr_same_as_perm: true,
+    corr_addr_line1: '', corr_addr_line2: '', corr_addr_line3: '',
+    corr_city: '', corr_state: '', corr_postal_code: '', corr_country: 'India'
+  };
 }
 
 function renderApplicantsEditor() {
@@ -648,10 +651,59 @@ function renderApplicantsEditor() {
             <div class="doc-thumb ${a[k+'_path']?'has-file':''}" data-uploadi="${i}" data-uploadk="${k}">
               ${a[k+'_path']
                 ? `<div class="text-emerald-700 font-medium text-sm">📄 Uploaded</div>
-                   <button class="vw text-xs text-indigo-600 hover:underline mt-1" data-path="${esc(a[k+'_path'])}">View</button>
-                   <button class="rp text-xs text-slate-500 hover:underline mt-1" data-i="${i}" data-k="${k}">Replace</button>`
+                   <div class="flex gap-2 mt-1">
+                     <button class="vw text-xs text-indigo-600 hover:underline" data-path="${esc(a[k+'_path'])}">View</button>
+                     <button class="dl text-xs text-emerald-600 hover:underline" data-path="${esc(a[k+'_path'])}" data-name="applicant${i+1}_${k}">Download</button>
+                     <button class="rp text-xs text-slate-500 hover:underline" data-i="${i}" data-k="${k}">Replace</button>
+                   </div>`
                 : `<div class="text-slate-400 text-sm">📎 ${k === 'pan' ? 'PAN Card' : k === 'aadhar' ? 'Aadhaar' : 'Photo'}</div>`}
             </div>`).join('')}
+        </div>
+      </div>
+
+      <div class="border-t pt-4 mt-4">
+        <div class="text-xs font-semibold text-slate-700 uppercase mb-3">Permanent Address</div>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="col-span-2"><label class="block text-xs font-medium text-slate-600 mb-1">Address Line 1</label>
+            <input class="aplF w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" data-i="${i}" data-k="perm_addr_line1" value="${esc(a.perm_addr_line1||'')}" /></div>
+          <div><label class="block text-xs font-medium text-slate-600 mb-1">Address Line 2</label>
+            <input class="aplF w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" data-i="${i}" data-k="perm_addr_line2" value="${esc(a.perm_addr_line2||'')}" /></div>
+          <div><label class="block text-xs font-medium text-slate-600 mb-1">Address Line 3</label>
+            <input class="aplF w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" data-i="${i}" data-k="perm_addr_line3" value="${esc(a.perm_addr_line3||'')}" /></div>
+          <div><label class="block text-xs font-medium text-slate-600 mb-1">City</label>
+            <input class="aplF w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" data-i="${i}" data-k="perm_city" value="${esc(a.perm_city||'')}" /></div>
+          <div><label class="block text-xs font-medium text-slate-600 mb-1">State</label>
+            <input class="aplF w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" data-i="${i}" data-k="perm_state" value="${esc(a.perm_state||'')}" /></div>
+          <div><label class="block text-xs font-medium text-slate-600 mb-1">Postal Code</label>
+            <input class="aplF w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" data-i="${i}" data-k="perm_postal_code" value="${esc(a.perm_postal_code||'')}" /></div>
+          <div><label class="block text-xs font-medium text-slate-600 mb-1">Country</label>
+            <input class="aplF w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" data-i="${i}" data-k="perm_country" value="${esc(a.perm_country||'India')}" /></div>
+        </div>
+      </div>
+
+      <div class="border-t pt-4 mt-4">
+        <div class="flex items-center justify-between mb-3">
+          <div class="text-xs font-semibold text-slate-700 uppercase">Correspondence Address</div>
+          <label class="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+            <input type="checkbox" class="sameAddrChk" data-i="${i}" ${a.corr_same_as_perm ? 'checked' : ''} />
+            Same as Permanent Address
+          </label>
+        </div>
+        <div class="grid grid-cols-2 gap-3 ${a.corr_same_as_perm ? 'hidden' : ''}" data-corraddr="${i}">
+          <div class="col-span-2"><label class="block text-xs font-medium text-slate-600 mb-1">Address Line 1</label>
+            <input class="aplF w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" data-i="${i}" data-k="corr_addr_line1" value="${esc(a.corr_addr_line1||'')}" /></div>
+          <div><label class="block text-xs font-medium text-slate-600 mb-1">Address Line 2</label>
+            <input class="aplF w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" data-i="${i}" data-k="corr_addr_line2" value="${esc(a.corr_addr_line2||'')}" /></div>
+          <div><label class="block text-xs font-medium text-slate-600 mb-1">Address Line 3</label>
+            <input class="aplF w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" data-i="${i}" data-k="corr_addr_line3" value="${esc(a.corr_addr_line3||'')}" /></div>
+          <div><label class="block text-xs font-medium text-slate-600 mb-1">City</label>
+            <input class="aplF w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" data-i="${i}" data-k="corr_city" value="${esc(a.corr_city||'')}" /></div>
+          <div><label class="block text-xs font-medium text-slate-600 mb-1">State</label>
+            <input class="aplF w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" data-i="${i}" data-k="corr_state" value="${esc(a.corr_state||'')}" /></div>
+          <div><label class="block text-xs font-medium text-slate-600 mb-1">Postal Code</label>
+            <input class="aplF w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" data-i="${i}" data-k="corr_postal_code" value="${esc(a.corr_postal_code||'')}" /></div>
+          <div><label class="block text-xs font-medium text-slate-600 mb-1">Country</label>
+            <input class="aplF w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" data-i="${i}" data-k="corr_country" value="${esc(a.corr_country||'India')}" /></div>
         </div>
       </div>`;
     cont.appendChild(card);
@@ -675,7 +727,13 @@ function renderApplicantsEditor() {
     });
   });
   cont.querySelectorAll('.vw').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); viewDoc(b.dataset.path); }));
+  cont.querySelectorAll('.dl').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); downloadDoc(b.dataset.path, b.dataset.name); }));
   cont.querySelectorAll('.rp').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); uploadDoc(+b.dataset.i, b.dataset.k); }));
+  cont.querySelectorAll('.sameAddrChk').forEach(cb => cb.addEventListener('change', e => {
+    const i = +e.target.dataset.i;
+    currentApp.applicants[i].corr_same_as_perm = e.target.checked;
+    renderApplicantsEditor();
+  }));
 }
 
 $('addApplicantBtn').addEventListener('click', () => {
@@ -731,8 +789,191 @@ async function viewDoc(path) {
   window.open(data.signedUrl, '_blank');
 }
 
+async function downloadDoc(path, suggestedName) {
+  const cfg = getConfig();
+  toast('Downloading...', 'info');
+  try {
+    const { data, error } = await db.storage.from(cfg.bucket).download(path);
+    if (error) throw error;
+    const ext = path.split('.').pop().toLowerCase();
+    const filename = (suggestedName || 'document') + '.' + ext;
+    const url = URL.createObjectURL(data);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename; a.click();
+    URL.revokeObjectURL(url);
+    toast('Downloaded', 'success');
+  } catch (e) { toast('Download failed: ' + e.message, 'error'); }
+}
+
+// ===== APPLICATION PDF =====
+function buildAppPdf(app) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+  const margin = 40;
+  let y = margin;
+
+  // Header
+  doc.setFontSize(16); doc.setFont(undefined, 'bold');
+  doc.text(app.project?.name || 'Application Form', margin, y);
+  y += 18;
+  doc.setFontSize(9); doc.setFont(undefined, 'normal');
+  doc.setTextColor(120);
+  if (app.project?.rera_number) { doc.text('RERA: ' + app.project.rera_number, margin, y); y += 12; }
+  doc.text('Reference: ' + (app.id || '').slice(0, 8).toUpperCase() + '   Status: ' + app.status + '   Source: ' + app.source, margin, y);
+  y += 10;
+  doc.setTextColor(0);
+  doc.setDrawColor(200); doc.line(margin, y, 555, y); y += 16;
+
+  // Section helper
+  const section = (title, rows) => {
+    if (y > 760) { doc.addPage(); y = margin; }
+    doc.setFontSize(11); doc.setFont(undefined, 'bold');
+    doc.text(title, margin, y); y += 4;
+    doc.autoTable({
+      startY: y + 4,
+      head: [],
+      body: rows.filter(r => r[1] !== null && r[1] !== undefined && r[1] !== ''),
+      theme: 'grid',
+      styles: { fontSize: 9, cellPadding: 4, textColor: [60, 60, 60] },
+      columnStyles: { 0: { cellWidth: 140, fontStyle: 'bold', fillColor: [248, 250, 252] }, 1: { cellWidth: 'auto' } },
+      margin: { left: margin, right: margin }
+    });
+    y = doc.lastAutoTable.finalY + 14;
+  };
+
+  // Property Interest
+  section('Property Interest', [
+    ['Unit Number', app.unit_number || '—'],
+    ['Document Date', app.document_date || '—'],
+    ['Entry Type', app.entry_type || '—'],
+    ['Broker Name', app.broker_name || '—'],
+    ['Remarks', app.remarks || '—']
+  ]);
+
+  // Applicants — KYC + per-applicant addresses
+  (app.applicants || []).forEach((a, i) => {
+    const fullName = [a.salutation, a.first_name, a.middle_name, a.last_name].filter(Boolean).join(' ');
+    const heading = (i === 0 ? 'Primary Applicant' : 'Co-Applicant ' + i) + ' — ' + (fullName || 'Unnamed');
+
+    // KYC block
+    section(heading, [
+      ['Name', fullName || '—'],
+      ['Date of Birth', a.dob || '—'],
+      ['Gender', a.gender || '—'],
+      ['Relationship', (a.relationship || '') + ' ' + (a.relative_name || '')],
+      ['PAN', a.pan || '—'],
+      ['Aadhaar', a.aadhar || '—'],
+      ['Photo', a.photo_path ? 'Uploaded' : 'Not provided'],
+      ['Aadhaar doc', a.aadhar_path ? 'Uploaded' : 'Not provided'],
+      ['PAN doc', a.pan_path ? 'Uploaded' : 'Not provided']
+    ]);
+
+    // Permanent Address
+    const permAddr = [a.perm_addr_line1, a.perm_addr_line2, a.perm_addr_line3].filter(Boolean).join(', ');
+    section('Permanent Address (' + (a.first_name || ('Applicant ' + (i+1))) + ')', [
+      ['Address', permAddr || '—'],
+      ['City', a.perm_city || '—'],
+      ['State', a.perm_state || '—'],
+      ['Postal Code', a.perm_postal_code || '—'],
+      ['Country', a.perm_country || 'India']
+    ]);
+
+    // Correspondence Address
+    if (!a.corr_same_as_perm) {
+      const corrAddr = [a.corr_addr_line1, a.corr_addr_line2, a.corr_addr_line3].filter(Boolean).join(', ');
+      section('Correspondence Address (' + (a.first_name || ('Applicant ' + (i+1))) + ')', [
+        ['Address', corrAddr || '—'],
+        ['City', a.corr_city || '—'],
+        ['State', a.corr_state || '—'],
+        ['Postal Code', a.corr_postal_code || '—'],
+        ['Country', a.corr_country || 'India']
+      ]);
+    } else {
+      section('Correspondence Address (' + (a.first_name || ('Applicant ' + (i+1))) + ')', [
+        ['Same as Permanent', 'Yes']
+      ]);
+    }
+  });
+
+  // Contact (per-applicant addresses are rendered with each applicant)
+  section('Contact Details', [
+    ['Mobile', app.mobile || '—'],
+    ['Email', app.email || '—'],
+    ['Phone', app.phone || '—']
+  ]);
+
+  // Payment
+  section('Payment Details', [
+    ['Booking Amount', app.payment_amount ? '₹ ' + app.payment_amount : '—'],
+    ['Payment Mode', app.payment_mode || '—'],
+    ['Reference / Cheque No.', app.payment_ref || '—'],
+    ['Bank', app.payment_bank || '—'],
+    ['Payment Date', app.payment_date || '—'],
+    ['Receipt No.', app.receipt_no || '—']
+  ]);
+
+  // Footer
+  const pageCount = doc.internal.getNumberOfPages();
+  for (let p = 1; p <= pageCount; p++) {
+    doc.setPage(p);
+    doc.setFontSize(8); doc.setTextColor(150);
+    doc.text('Generated ' + new Date().toLocaleString() + '   ·   Page ' + p + ' of ' + pageCount, margin, 825);
+  }
+  return doc;
+}
+
+async function downloadZip() {
+  if (!currentApp) return;
+  const cfg = getConfig();
+  toast('Building ZIP...', 'info');
+  try {
+    // 1. Re-fetch fresh data so ZIP reflects latest saves
+    const { data: app, error } = await db.from('applications')
+      .select('*, project:projects(*), applicants(*)').eq('id', currentApp.id).single();
+    if (error) throw error;
+    app.applicants = (app.applicants || []).sort((a,b) => (a.display_seq||0) - (b.display_seq||0));
+
+    // 2. Build PDF
+    const pdf = buildAppPdf(app);
+    const pdfBlob = pdf.output('blob');
+
+    // 3. Build ZIP
+    const zip = new JSZip();
+    const primary = app.applicants.find(a => a.is_primary) || app.applicants[0] || {};
+    const folderName = ((primary.first_name || 'application') + '_' + (primary.last_name || '') + '_' + (app.unit_number || 'NoUnit')).replace(/[^a-zA-Z0-9_-]/g, '_');
+    const folder = zip.folder(folderName);
+    folder.file('Application_Form.pdf', pdfBlob);
+
+    // 4. Add each applicant's documents
+    let docCount = 0;
+    for (const a of app.applicants) {
+      const tag = a.is_primary ? 'Primary' : 'CoApplicant_' + a.display_seq;
+      for (const kind of ['photo', 'aadhar', 'pan']) {
+        const path = a[kind + '_path'];
+        if (!path) continue;
+        try {
+          const { data: fileBlob, error: dlErr } = await db.storage.from(cfg.bucket).download(path);
+          if (dlErr) { console.warn('skip ' + path, dlErr); continue; }
+          const ext = path.split('.').pop().toLowerCase();
+          folder.file(tag + '_' + kind + '.' + ext, fileBlob);
+          docCount++;
+        } catch (e) { console.warn('skip ' + path, e); }
+      }
+    }
+
+    // 5. Generate ZIP and download
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = folderName + '.zip'; a.click();
+    URL.revokeObjectURL(url);
+    toast('ZIP ready (' + docCount + ' attachments)', 'success');
+  } catch (e) { toast('ZIP failed: ' + e.message, 'error'); }
+}
+
 // ===== SAVE / FINALIZE / EXPORT =====
 $('saveAppBtn').addEventListener('click', () => saveApp(true));
+$('downloadZipBtn').addEventListener('click', downloadZip);
 $('finalizeBtn').addEventListener('click', async () => {
   if (!confirm('Mark this application as Complete?')) return;
   const ok = await saveApp(false);
@@ -746,20 +987,51 @@ $('finalizeBtn').addEventListener('click', async () => {
 async function saveApp(showToast = true) {
   if (!currentApp) return false;
   const fields = {};
-  ['unit_number','document_date','entry_type','broker_name','remarks','addr_line1','addr_line2','addr_line3',
-   'city','state','country','postal_code','mobile','email','phone','payment_amount','payment_mode',
+  ['unit_number','document_date','entry_type','broker_name','remarks',
+   'mobile','email','phone','payment_amount','payment_mode',
    'payment_ref','payment_bank','payment_date','receipt_no'].forEach(f => fields[f] = currentApp[f] || null);
 
   const { error: aErr } = await db.from('applications').update(fields).eq('id', currentApp.id);
   if (aErr) { toast(aErr.message, 'error'); return false; }
 
   await db.from('applicants').delete().eq('application_id', currentApp.id);
-  const rows = currentApp.applicants.map((a, i) => ({
-    application_id: currentApp.id, is_primary: i === 0, display_seq: i + 1,
-    salutation: a.salutation, first_name: a.first_name, middle_name: a.middle_name, last_name: a.last_name,
-    dob: a.dob || null, gender: a.gender, relationship: a.relationship, relative_name: a.relative_name,
-    pan: a.pan, aadhar: a.aadhar, photo_path: a.photo_path, aadhar_path: a.aadhar_path, pan_path: a.pan_path
-  }));
+  const rows = currentApp.applicants.map((a, i) => {
+    const sameAddr = !!a.corr_same_as_perm;
+    const corrFields = sameAddr ? {
+      corr_same_as_perm: true,
+      corr_addr_line1: a.perm_addr_line1 || null,
+      corr_addr_line2: a.perm_addr_line2 || null,
+      corr_addr_line3: a.perm_addr_line3 || null,
+      corr_city: a.perm_city || null,
+      corr_state: a.perm_state || null,
+      corr_postal_code: a.perm_postal_code || null,
+      corr_country: a.perm_country || 'India'
+    } : {
+      corr_same_as_perm: false,
+      corr_addr_line1: a.corr_addr_line1 || null,
+      corr_addr_line2: a.corr_addr_line2 || null,
+      corr_addr_line3: a.corr_addr_line3 || null,
+      corr_city: a.corr_city || null,
+      corr_state: a.corr_state || null,
+      corr_postal_code: a.corr_postal_code || null,
+      corr_country: a.corr_country || 'India'
+    };
+    return {
+      application_id: currentApp.id, is_primary: i === 0, display_seq: i + 1,
+      salutation: a.salutation, first_name: a.first_name, middle_name: a.middle_name, last_name: a.last_name,
+      dob: a.dob || null, gender: a.gender, relationship: a.relationship, relative_name: a.relative_name,
+      pan: a.pan, aadhar: a.aadhar,
+      photo_path: a.photo_path, aadhar_path: a.aadhar_path, pan_path: a.pan_path,
+      perm_addr_line1: a.perm_addr_line1 || null,
+      perm_addr_line2: a.perm_addr_line2 || null,
+      perm_addr_line3: a.perm_addr_line3 || null,
+      perm_city: a.perm_city || null,
+      perm_state: a.perm_state || null,
+      perm_postal_code: a.perm_postal_code || null,
+      perm_country: a.perm_country || 'India',
+      ...corrFields
+    };
+  });
   if (rows.length) {
     const { error } = await db.from('applicants').insert(rows);
     if (error) { toast(error.message, 'error'); return false; }

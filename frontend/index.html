@@ -98,38 +98,11 @@
 
     <button id="addApplicantBtn" class="text-indigo-600 hover:text-indigo-800 font-medium text-sm">+ Add Co-Applicant</button>
 
-    <!-- Address & Contact -->
+    <!-- Contact (one set per application, used to reach out) -->
     <div class="bg-white rounded-xl border border-slate-200 p-5">
-      <h3 class="font-semibold text-slate-900 mb-4">Address & Contact</h3>
-      <div class="grid sm:grid-cols-2 gap-3">
-        <div class="sm:col-span-2">
-          <label class="block text-xs font-medium text-slate-600 mb-1">Address Line 1 *</label>
-          <input id="addr_line1" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
-        </div>
-        <div>
-          <label class="block text-xs font-medium text-slate-600 mb-1">Address Line 2</label>
-          <input id="addr_line2" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
-        </div>
-        <div>
-          <label class="block text-xs font-medium text-slate-600 mb-1">Address Line 3</label>
-          <input id="addr_line3" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
-        </div>
-        <div>
-          <label class="block text-xs font-medium text-slate-600 mb-1">City</label>
-          <input id="city" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
-        </div>
-        <div>
-          <label class="block text-xs font-medium text-slate-600 mb-1">State</label>
-          <input id="state" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
-        </div>
-        <div>
-          <label class="block text-xs font-medium text-slate-600 mb-1">Postal Code</label>
-          <input id="postal_code" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
-        </div>
-        <div>
-          <label class="block text-xs font-medium text-slate-600 mb-1">Country</label>
-          <input id="country" value="India" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
-        </div>
+      <h3 class="font-semibold text-slate-900 mb-4">Contact Details</h3>
+      <p class="text-xs text-slate-500 mb-3">How we should reach you. (Address details are captured per applicant above.)</p>
+      <div class="grid sm:grid-cols-3 gap-3">
         <div>
           <label class="block text-xs font-medium text-slate-600 mb-1">Mobile *</label>
           <input id="mobile" type="tel" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
@@ -227,6 +200,11 @@ function blankApplicant() {
     salutation: 'Mr.', first_name: '', middle_name: '', last_name: '',
     dob: '', gender: '', relationship: 'S/o', relative_name: '',
     pan: '', aadhar: '',
+    perm_addr_line1: '', perm_addr_line2: '', perm_addr_line3: '',
+    perm_city: '', perm_state: '', perm_postal_code: '', perm_country: 'India',
+    corr_same_as_perm: true,
+    corr_addr_line1: '', corr_addr_line2: '', corr_addr_line3: '',
+    corr_city: '', corr_state: '', corr_postal_code: '', corr_country: 'India',
     files: { photo: null, aadhar: null, pan: null }
   };
 }
@@ -280,6 +258,52 @@ function renderApplicants() {
               <input type="file" class="hidden fileF" data-i="${i}" data-k="${k}" accept="image/*,application/pdf" />
             </label>`).join('')}
         </div>
+      </div>
+
+      <div class="border-t mt-4 pt-4">
+        <div class="text-xs font-semibold text-slate-700 uppercase mb-3">Permanent Address</div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="sm:col-span-2"><label class="block text-xs font-medium text-slate-600 mb-1">Address Line 1 *</label>
+            <input class="aF w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" data-i="${i}" data-k="perm_addr_line1" value="${esc(a.perm_addr_line1)}" /></div>
+          <div><label class="block text-xs font-medium text-slate-600 mb-1">Address Line 2</label>
+            <input class="aF w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" data-i="${i}" data-k="perm_addr_line2" value="${esc(a.perm_addr_line2)}" /></div>
+          <div><label class="block text-xs font-medium text-slate-600 mb-1">Address Line 3</label>
+            <input class="aF w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" data-i="${i}" data-k="perm_addr_line3" value="${esc(a.perm_addr_line3)}" /></div>
+          <div><label class="block text-xs font-medium text-slate-600 mb-1">City</label>
+            <input class="aF w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" data-i="${i}" data-k="perm_city" value="${esc(a.perm_city)}" /></div>
+          <div><label class="block text-xs font-medium text-slate-600 mb-1">State</label>
+            <input class="aF w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" data-i="${i}" data-k="perm_state" value="${esc(a.perm_state)}" /></div>
+          <div><label class="block text-xs font-medium text-slate-600 mb-1">Postal Code</label>
+            <input class="aF w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" data-i="${i}" data-k="perm_postal_code" value="${esc(a.perm_postal_code)}" /></div>
+          <div><label class="block text-xs font-medium text-slate-600 mb-1">Country</label>
+            <input class="aF w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" data-i="${i}" data-k="perm_country" value="${esc(a.perm_country)}" /></div>
+        </div>
+      </div>
+
+      <div class="border-t mt-4 pt-4">
+        <div class="flex items-center justify-between mb-3">
+          <div class="text-xs font-semibold text-slate-700 uppercase">Correspondence Address</div>
+          <label class="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+            <input type="checkbox" class="sameAddrChk" data-i="${i}" ${a.corr_same_as_perm ? 'checked' : ''} />
+            Same as Permanent Address
+          </label>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 ${a.corr_same_as_perm ? 'hidden' : ''}" data-corraddr="${i}">
+          <div class="sm:col-span-2"><label class="block text-xs font-medium text-slate-600 mb-1">Address Line 1</label>
+            <input class="aF w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" data-i="${i}" data-k="corr_addr_line1" value="${esc(a.corr_addr_line1)}" /></div>
+          <div><label class="block text-xs font-medium text-slate-600 mb-1">Address Line 2</label>
+            <input class="aF w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" data-i="${i}" data-k="corr_addr_line2" value="${esc(a.corr_addr_line2)}" /></div>
+          <div><label class="block text-xs font-medium text-slate-600 mb-1">Address Line 3</label>
+            <input class="aF w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" data-i="${i}" data-k="corr_addr_line3" value="${esc(a.corr_addr_line3)}" /></div>
+          <div><label class="block text-xs font-medium text-slate-600 mb-1">City</label>
+            <input class="aF w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" data-i="${i}" data-k="corr_city" value="${esc(a.corr_city)}" /></div>
+          <div><label class="block text-xs font-medium text-slate-600 mb-1">State</label>
+            <input class="aF w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" data-i="${i}" data-k="corr_state" value="${esc(a.corr_state)}" /></div>
+          <div><label class="block text-xs font-medium text-slate-600 mb-1">Postal Code</label>
+            <input class="aF w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" data-i="${i}" data-k="corr_postal_code" value="${esc(a.corr_postal_code)}" /></div>
+          <div><label class="block text-xs font-medium text-slate-600 mb-1">Country</label>
+            <input class="aF w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" data-i="${i}" data-k="corr_country" value="${esc(a.corr_country)}" /></div>
+        </div>
       </div>`;
     cont.appendChild(card);
   });
@@ -308,6 +332,14 @@ function renderApplicants() {
     applicants.splice(+b.dataset.i, 1);
     renderApplicants();
   }));
+  // Wire up "Same as Permanent" checkbox
+  cont.querySelectorAll('.sameAddrChk').forEach(cb => {
+    cb.addEventListener('change', e => {
+      const i = +e.target.dataset.i;
+      applicants[i].corr_same_as_perm = e.target.checked;
+      renderApplicants();
+    });
+  });
 }
 
 $('addApplicantBtn').addEventListener('click', () => {
@@ -323,27 +355,20 @@ $('submitBtn').addEventListener('click', async () => {
 
   // Validation
   if (!applicants[0].first_name) { return showFormError('Primary applicant first name is required'); }
-  if (!$('addr_line1').value.trim()) { return showFormError('Address Line 1 is required'); }
+  if (!applicants[0].perm_addr_line1) { return showFormError('Primary applicant: Permanent Address Line 1 is required'); }
   if (!$('mobile').value.trim()) { return showFormError('Mobile number is required'); }
 
   const btn = $('submitBtn');
   btn.disabled = true; btn.textContent = 'Submitting…';
 
   try {
-    // 1. Create application row
+    // 1. Create application row (no application-level address; addresses are per-applicant)
     const appData = {
       project_id: project.id,
       unit_number: $('unitNumber').value.trim() || null,
       mobile: $('mobile').value.trim(),
       email: $('email').value.trim() || null,
       phone: $('phone').value.trim() || null,
-      addr_line1: $('addr_line1').value.trim(),
-      addr_line2: $('addr_line2').value.trim() || null,
-      addr_line3: $('addr_line3').value.trim() || null,
-      city: $('city').value.trim() || null,
-      state: $('state').value.trim() || null,
-      country: $('country').value.trim() || 'India',
-      postal_code: $('postal_code').value.trim() || null,
       remarks: $('notes').value.trim() || null,
       status: 'pending',
       source: 'customer'
@@ -367,6 +392,27 @@ $('submitBtn').addEventListener('click', async () => {
         paths[kind + '_path'] = path;
       }
 
+      // Build correspondence fields: if checkbox checked, mirror permanent; else use what was entered
+      const corrSrc = a.corr_same_as_perm ? a : a;  // (we always copy from `a`; choice of fields differs)
+      const corrFields = a.corr_same_as_perm ? {
+        corr_same_as_perm: true,
+        corr_addr_line1: a.perm_addr_line1 || null,
+        corr_addr_line2: a.perm_addr_line2 || null,
+        corr_addr_line3: a.perm_addr_line3 || null,
+        corr_city: a.perm_city || null,
+        corr_state: a.perm_state || null,
+        corr_postal_code: a.perm_postal_code || null,
+        corr_country: a.perm_country || 'India'
+      } : {
+        corr_same_as_perm: false,
+        corr_addr_line1: a.corr_addr_line1 || null,
+        corr_addr_line2: a.corr_addr_line2 || null,
+        corr_addr_line3: a.corr_addr_line3 || null,
+        corr_city: a.corr_city || null,
+        corr_state: a.corr_state || null,
+        corr_postal_code: a.corr_postal_code || null,
+        corr_country: a.corr_country || 'India'
+      };
       const { error: aErr } = await db.from('applicants').insert({
         application_id: app.id,
         is_primary: i === 0,
@@ -375,6 +421,14 @@ $('submitBtn').addEventListener('click', async () => {
         dob: a.dob || null, gender: a.gender || null,
         relationship: a.relationship, relative_name: a.relative_name || null,
         pan: a.pan || null, aadhar: a.aadhar || null,
+        perm_addr_line1: a.perm_addr_line1 || null,
+        perm_addr_line2: a.perm_addr_line2 || null,
+        perm_addr_line3: a.perm_addr_line3 || null,
+        perm_city: a.perm_city || null,
+        perm_state: a.perm_state || null,
+        perm_postal_code: a.perm_postal_code || null,
+        perm_country: a.perm_country || 'India',
+        ...corrFields,
         ...paths
       });
       if (aErr) throw new Error('Save applicant ' + (i+1) + ': ' + aErr.message);
