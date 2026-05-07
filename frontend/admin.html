@@ -24,10 +24,10 @@
 <div id="configScreen" class="hidden min-h-screen flex items-center justify-center p-4">
   <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 w-full max-w-md">
     <h1 class="text-xl font-bold text-slate-900 mb-2">First-time Setup</h1>
-    <p class="text-sm text-slate-500 mb-6">Paste your db credentials. Stored in browser only.</p>
-    <label class="block text-xs font-medium text-slate-600 mb-1">db URL</label>
+    <p class="text-sm text-slate-500 mb-6">Paste your Supabase credentials. Stored in browser only.</p>
+    <label class="block text-xs font-medium text-slate-600 mb-1">Supabase URL</label>
     <input id="cfgUrl" type="text" placeholder="https://xxxxx.db.co" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm mb-3" />
-    <label class="block text-xs font-medium text-slate-600 mb-1">db anon key</label>
+    <label class="block text-xs font-medium text-slate-600 mb-1">Supabase anon key</label>
     <textarea id="cfgKey" placeholder="eyJhbGci..." rows="3" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm mb-3 font-mono text-xs"></textarea>
     <label class="block text-xs font-medium text-slate-600 mb-1">Storage bucket name</label>
     <input id="cfgBucket" type="text" value="kyc" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm mb-4" />
@@ -297,7 +297,7 @@ async function init() {
     db = window.supabase.createClient(cfg.url, cfg.key, { auth: { persistSession: true, autoRefreshToken: true } });
   } catch (e) {
     showScreen('configScreen');
-    $('cfgError').textContent = 'Invalid db config: ' + e.message;
+    $('cfgError').textContent = 'Invalid Supabase config: ' + e.message;
     $('cfgError').classList.remove('hidden');
     return;
   }
