@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RPS CRM</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+  .tab-active { border-bottom: 2px solid #4f46e5; color: #4f46e5; font-weight: 600; }
+  .doc-thumb { border: 2px dashed #d1d5db; border-radius: 8px; padding: 12px; min-height: 80px;
+               display: flex; flex-direction: column; align-items: center; justify-content: center;
+               cursor: pointer; transition: all 0.2s; background: #f9fafb; }
+  .doc-thumb:hover { border-color: #4f46e5; background: #eef2ff; }
+  .doc-thumb.has-file { border-style: solid; border-color: #10b981; background: #ecfdf5; }
+  .nav-btn.active { background: #eef2ff; color: #4338ca; font-weight: 600; }
+</style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+
+<!-- CONFIG SCREEN -->
+<div id="configScreen" class="hidden min-h-screen flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 w-full max-w-md">
+    <h1 class="text-xl font-bold text-slate-900 mb-2">First-time Setup</h1>
+    <p class="text-sm text-slate-500 mb-6">Paste your Supabase credentials. Stored in browser only.</p>
+    <label class="block text-xs font-medium text-slate-600 mb-1">https://crxkbpzoasxhegyisjpn.supabase.co</label>
+    <input id="cfgUrl" type="text" placeholder="https://xxxxx.supabase.co" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm mb-3" />
+    <label class="block text-xs font-medium text-slate-600 mb-1">eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNyeGticHpvYXN4aGVneWlzanBuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNTY0NTEsImV4cCI6MjA5MzYzMjQ1MX0.1AxzSelp4encV6e65huvRSlc8X7azGSJGcWsgcBUeds</label>
+    <textarea id="cfgKey" placeholder="eyJhbGci..." rows="3" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm mb-3 font-mono text-xs"></textarea>
+    <label class="block text-xs font-medium text-slate-600 mb-1">Storage bucket name</label>
+    <input id="cfgBucket" type="text" value="kyc" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm mb-4" />
+    <div id="cfgError" class="hidden bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm mb-3"></div>
+    <button id="cfgSave" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-sm font-medium">Save & Continue</button>
+  </div>
+</div>
+
+<!-- LOGIN SCREEN -->
+<div id="loginScreen" class="hidden min-h-screen flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 w-full max-w-md">
+    <div class="flex items-center gap-3 mb-6">
+      <div class="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">R</div>
+      <div>
+        <h1 class="font-semibold text-slate-900">RPS CRM</h1>
+        <p class="text-xs text-slate-500">Admin sign-in</p>
+      </div>
+    </div>
+    <label class="block text-xs font-medium text-slate-600 mb-1">Email</label>
+    <input id="loginEmail" type="email" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm mb-3" />
+    <label class="block text-xs font-medium text-slate-600 mb-1">Password</label>
+    <input id="loginPassword" type="password" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm mb-3" />
+    <div id="loginError" class="hidden bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm mb-3"></div>
+    <button id="loginBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-sm font-medium">Sign in</button>
+    <button id="resetCfgBtn" class="text-xs text-slate-400 hover:text-slate-600 mt-4 w-full text-center">Reset config</button>
+  </div>
+</div>
+
+<!-- APP SHELL -->
+<div id="appShell" class="hidden">
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-10">
+    <div class="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-6">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">R</div>
+          <span class="font-semibold text-slate-900">RPS CRM</span>
+        </div>
+        <nav class="flex gap-1">
+          <button data-tab="apps" class="nav-btn px-3 py-2 text-sm rounded-md text-slate-600 hover:text-slate-900">Applications</button>
+          <button data-tab="projects" class="nav-btn px-3 py-2 text-sm rounded-md text-slate-600 hover:text-slate-900">Projects</button>
+        </nav>
+      </div>
+      <div class="flex items-center gap-3 text-sm">
+        <span id="userBadge" class="text-slate-700"></span>
+        <button id="logoutBtn" class="text-slate-500 hover:text-slate-900 text-sm">Logout</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto p-6">
+    <!-- Apps view -->
+    <section id="appsView">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 class="text-xl font-semibold">Applications</h2>
+          <p class="text-sm text-slate-500" id="appsCount">0 applications</p>
+        </div>
+        <div class="flex gap-2">
+          <input id="appsSearch" placeholder="Search..." class="border border-slate-300 rounded-lg px-3 py-2 text-sm w-60" />
+          <select id="appsStatusFilter" class="border border-slate-300 rounded-lg px-2 py-2 text-sm">
+            <option value="">All statuses</option>
+            <option value="pending">Pending</option>
+            <option value="complete">Complete</option>
+            <option value="exported">Exported</option>
+          </select>
+          <button id="bulkExportBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium">⬇ Export</button>
+          <button id="newAppBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium">+ New</button>
+        </div>
+      </div>
+      <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-50 border-b border-slate-200 text-left text-xs text-slate-600 uppercase">
+            <tr>
+              <th class="px-4 py-3 w-8"></th>
+              <th class="px-4 py-3">Project / Unit</th>
+              <th class="px-4 py-3">Primary Applicant</th>
+              <th class="px-4 py-3">Mobile</th>
+              <th class="px-4 py-3">Status</th>
+              <th class="px-4 py-3">Updated</th>
+              <th class="px-4 py-3"></th>
+            </tr>
+          </thead>
+          <tbody id="appsTable" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Projects view -->
+    <section id="projectsView" class="hidden">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-semibold">Projects</h2>
+        <button id="newProjectBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium">+ New Project</button>
+      </div>
+      <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-50 border-b text-xs text-left text-slate-600 uppercase">
+            <tr>
+              <th class="px-4 py-3">Name</th>
+              <th class="px-4 py-3">Slug</th>
+              <th class="px-4 py-3">RERA</th>
+              <th class="px-4 py-3">Active</th>
+              <th class="px-4 py-3"></th>
+            </tr>
+          </thead>
+          <tbody id="projectsTable" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Edit view -->
+    <section id="editView" class="hidden">
+      <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center gap-3">
+          <button id="backBtn" class="text-slate-500 hover:text-slate-900">← Back</button>
+          <div>
+            <h2 id="editTitle" class="text-xl font-semibold">Edit Application</h2>
+            <p id="editSubtitle" class="text-xs text-slate-500"></p>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <button id="saveAppBtn" class="bg-slate-200 hover:bg-slate-300 text-slate-800 px-4 py-2 rounded-lg text-sm">Save</button>
+          <button id="finalizeBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium">Mark Complete</button>
+          <button id="exportSingleBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium">⬇ Export</button>
+        </div>
+      </div>
+      <div class="border-b border-slate-200 mb-6 flex gap-6 text-sm">
+        <button data-edittab="project" class="edit-tab tab-active py-2">1. Project & Unit</button>
+        <button data-edittab="applicants" class="edit-tab text-slate-500 py-2">2. Applicants</button>
+        <button data-edittab="address" class="edit-tab text-slate-500 py-2">3. Address & Contact</button>
+        <button data-edittab="payment" class="edit-tab text-slate-500 py-2">4. Payment</button>
+      </div>
+
+      <div id="editTab-project" class="edit-tab-panel bg-white rounded-xl border border-slate-200 p-6 grid grid-cols-2 gap-4">
+        <div><label class="block text-xs font-medium text-slate-600 mb-1">Unit Number *</label>
+          <input data-field="unit_number" class="appField w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" /></div>
+        <div><label class="block text-xs font-medium text-slate-600 mb-1">Document Date</label>
+          <input data-field="document_date" type="date" class="appField w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" /></div>
+        <div><label class="block text-xs font-medium text-slate-600 mb-1">Entry Type</label>
+          <input data-field="entry_type" class="appField w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" /></div>
+        <div><label class="block text-xs font-medium text-slate-600 mb-1">Broker Name</label>
+          <input data-field="broker_name" class="appField w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" /></div>
+        <div class="col-span-2"><label class="block text-xs font-medium text-slate-600 mb-1">Remarks</label>
+          <textarea data-field="remarks" rows="2" class="appField w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"></textarea></div>
+      </div>
+
+      <div id="editTab-applicants" class="edit-tab-panel hidden">
+        <div id="applicantsContainer" class="space-y-4"></div>
+        <button id="addApplicantBtn" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium mt-3">+ Add Co-Applicant</button>
+      </div>
+
+      <div id="editTab-address" class="edit-tab-panel hidden bg-white rounded-xl border border-slate-200 p-6 grid grid-cols-2 gap-4">
+        <div class="col-span-2"><label class="block text-xs font-medium text-slate-600 mb-1">Address Line 1</label>
+          <input data-field="addr_line1" class="appField w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" /></div>
+        <div><label class="block text-xs font-medium text-slate-600 mb-1">Address Line 2</label>
+          <input data-field="addr_line2" class="appField w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" /></div>
+        <div><label class="block text-xs font-medium text-slate-600 mb-1">Address Line 3</label>
+          <input data-field="addr_line3" class="appField w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" /></div>
+        <div><label class="block text-xs font-medium text-slate-600 mb-1">City</label>
+          <input data-field="city" class="appField w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" /></div>
+        <div><label class="block text-xs font-medium text-slate-600 mb-1">State</label>
+          <input data-field="state" class="appField w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" /></div>
+        <div><label class="block text-xs font-medium text-slate-600 mb-1">Postal Code</label>
+          <input data-field="postal_code" class="appField w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" /></div>
+        <div><label class="block text-xs font-medium text-slate-600 mb-1">Country</label>
+          <input data-field="country" class="appField w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" /></div>
+        <div><label class="block text-xs font-medium text-slate-600 mb-1">Mobile *</label>
+          <input data-field="mobile" class="appField w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" /></div>
+        <div><label class="block text-xs font-medium text-slate-600 mb-1">Email</label>
+          <input data-field="email" type="email" class="appField w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" /></div>
+        <div><label class="block text-xs font-medium text-slate-600 mb-1">Phone</label>
+          <input data-field="phone" class="appField w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" /></div>
+      </div>
+
+      <div id="editTab-payment" class="edit-tab-panel hidden bg-white rounded-xl border border-slate-200 p-6 grid grid-cols-2 gap-4">
+        <div><label class="block text-xs font-medium text-slate-600 mb-1">Booking Amount (₹)</label>
+          <input data-field="payment_amount" type="number" class="appField w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" /></div>
+        <div><label class="block text-xs font-medium text-slate-600 mb-1">Payment Mode</label>
+          <select data-field="payment_mode" class="appField w-full border border-slate-300 rounded-lg px-3 py-2 text-sm">
+            <option value="">Select</option><option>Cheque</option><option>RTGS/NEFT</option><option>UPI</option><option>Cash</option><option>Demand Draft</option>
+          </select></div>
+        <div><label class="block text-xs font-medium text-slate-600 mb-1">Cheque/Ref No.</label>
+          <input data-field="payment_ref" class="appField w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" /></div>
+        <div><label class="block text-xs font-medium text-slate-600 mb-1">Bank</label>
+          <input data-field="payment_bank" class="appField w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" /></div>
+        <div><label class="block text-xs font-medium text-slate-600 mb-1">Payment Date</label>
+          <input data-field="payment_date" type="date" class="appField w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" /></div>
+        <div><label class="block text-xs font-medium text-slate-600 mb-1">Receipt No.</label>
+          <input data-field="receipt_no" class="appField w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" /></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- PROJECT MODAL -->
+<div id="projectModal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-xl max-w-md w-full">
+    <div class="p-5 border-b"><h3 id="projectModalTitle" class="font-semibold">New Project</h3></div>
+    <div class="p-5 space-y-3">
+      <div><label class="block text-xs font-medium text-slate-600 mb-1">Project Name *</label>
+        <input id="projName" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" /></div>
+      <div><label class="block text-xs font-medium text-slate-600 mb-1">Slug *</label>
+        <input id="projSlug" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" /></div>
+      <div><label class="block text-xs font-medium text-slate-600 mb-1">RERA Number *</label>
+        <input id="projRera" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" /></div>
+      <div><label class="block text-xs font-medium text-slate-600 mb-1">Fiscal Year</label>
+        <input id="projFiscal" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" value="01-04-2025-31-03-2026" /></div>
+      <label class="flex items-center gap-2 text-sm">
+        <input id="projActive" type="checkbox" checked /> Active
+      </label>
+      <div id="projectModalError" class="hidden bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm"></div>
+    </div>
+    <div class="p-4 border-t flex justify-end gap-2">
+      <button id="projCancelBtn" class="px-4 py-2 text-sm">Cancel</button>
+      <button id="projSaveBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast" class="hidden fixed bottom-6 right-6 px-4 py-3 rounded-lg shadow-lg z-50 text-sm"></div>
+
+<script>
+'use strict';
+
+// ===== UTILITIES =====
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function toast(msg, type='info') {
+  const t = $('toast');
+  t.textContent = msg;
+  t.className = 'fixed bottom-6 right-6 px-4 py-3 rounded-lg shadow-lg z-50 text-sm ' +
+    (type === 'error' ? 'bg-red-600 text-white' : type === 'success' ? 'bg-emerald-600 text-white' : 'bg-slate-900 text-white');
+  t.classList.remove('hidden');
+  setTimeout(() => t.classList.add('hidden'), 3000);
+}
+
+// ===== CONFIG =====
+const CFG_KEY = 'rps-crm-config';
+const getConfig = () => { try { return JSON.parse(localStorage.getItem(CFG_KEY)) || null; } catch { return null; } };
+const saveConfig = (c) => localStorage.setItem(CFG_KEY, JSON.stringify(c));
+
+let db = null;
+let currentUser = null;
+let currentApp = null;
+let cachedProjects = [];
+let cachedApps = [];
+let selectedApps = new Set();
+
+// ===== SCREEN MANAGEMENT =====
+function showScreen(name) {
+  ['configScreen','loginScreen','appShell'].forEach(id => $(id).classList.add('hidden'));
+  $(name).classList.remove('hidden');
+}
+function showView(name) {
+  ['appsView','projectsView','editView'].forEach(id => $(id).classList.add('hidden'));
+  $(name + 'View').classList.remove('hidden');
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+}
+
+// ===== INIT =====
+async function init() {
+  const cfg = getConfig();
+  if (!cfg) { showScreen('configScreen'); return; }
+
+  try {
+    db = window.supabase.createClient(cfg.url, cfg.key, { auth: { persistSession: true, autoRefreshToken: true } });
+  } catch (e) {
+    showScreen('configScreen');
+    $('cfgError').textContent = 'Invalid Supabase config: ' + e.message;
+    $('cfgError').classList.remove('hidden');
+    return;
+  }
+
+  // Check existing session with timeout
+  const sessPromise = db.auth.getSession();
+  const timeoutPromise = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 6000));
+  let session = null;
+  try {
+    const { data } = await Promise.race([sessPromise, timeoutPromise]);
+    session = data?.session;
+  } catch (e) {
+    console.warn('Session check failed/timed out:', e.message);
+  }
+
+  if (session) {
+    await afterLogin();
+  } else {
+    showScreen('loginScreen');
+  }
+}
+
+// ===== CONFIG HANDLERS =====
+$('cfgSave').addEventListener('click', () => {
+  const url = $('cfgUrl').value.trim().replace(/\/$/, '');
+  const key = $('cfgKey').value.trim();
+  const bucket = $('cfgBucket').value.trim() || 'kyc';
+  const errEl = $('cfgError');
+  errEl.classList.add('hidden');
+  if (!url || !key) { errEl.textContent = 'URL and key required'; errEl.classList.remove('hidden'); return; }
+  if (!url.startsWith('https://')) { errEl.textContent = 'URL must start with https://'; errEl.classList.remove('hidden'); return; }
+  saveConfig({ url, key, bucket });
+  location.reload();
+});
+
+$('resetCfgBtn').addEventListener('click', () => {
+  if (confirm('Reset configuration?')) { localStorage.removeItem(CFG_KEY); location.reload(); }
+});
+
+// ===== LOGIN =====
+$('loginBtn').addEventListener('click', async () => {
+  const email = $('loginEmail').value.trim();
+  const password = $('loginPassword').value;
+  const errEl = $('loginError');
+  errEl.classList.add('hidden');
+  const btn = $('loginBtn');
+  btn.disabled = true; btn.textContent = 'Signing in…';
+  try {
+    const { data, error } = await db.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    if (!data.session) throw new Error('No session created — check email confirmation in Supabase');
+    await afterLogin();
+  } catch (e) {
+    errEl.textContent = e.message || 'Login failed';
+    errEl.classList.remove('hidden');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Sign in';
+  }
+});
+
+$('logoutBtn').addEventListener('click', async () => {
+  await db.auth.signOut();
+  currentUser = null;
+  showScreen('loginScreen');
+});
+
+async function afterLogin() {
+  try {
+    const { data: { user } } = await db.auth.getUser();
+    if (!user) { showScreen('loginScreen'); return; }
+    const { data: profile, error } = await db
+      .from('profiles').select('*').eq('id', user.id).maybeSingle();
+    if (error) throw error;
+    if (!profile) {
+      $('loginError').textContent = 'Profile not found. Run schema.sql in Supabase first.';
+      $('loginError').classList.remove('hidden');
+      showScreen('loginScreen');
+      return;
+    }
+    if (!profile.is_active) {
+      $('loginError').textContent = 'Account disabled.';
+      $('loginError').classList.remove('hidden');
+      await db.auth.signOut();
+      showScreen('loginScreen');
+      return;
+    }
+    currentUser = profile;
+    $('userBadge').textContent = `${profile.email} · ${profile.role}`;
+    showScreen('appShell');
+    showView('apps');
+    await loadProjects();
+    await loadApplications();
+  } catch (e) {
+    console.error(e);
+    $('loginError').textContent = 'Login failed: ' + e.message;
+    $('loginError').classList.remove('hidden');
+    showScreen('loginScreen');
+  }
+}
+
+// ===== NAVIGATION =====
+document.querySelectorAll('.nav-btn').forEach(b => {
+  b.addEventListener('click', () => showView(b.dataset.tab));
+});
+
+// ===== PROJECTS =====
+async function loadProjects() {
+  const { data, error } = await db.from('projects').select('*').order('name');
+  if (error) { toast('Load projects: ' + error.message, 'error'); return; }
+  cachedProjects = data || [];
+  renderProjects();
+}
+
+function renderProjects() {
+  const tbody = $('projectsTable');
+  tbody.innerHTML = '';
+  if (!cachedProjects.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="p-12 text-center text-slate-400">No projects yet.</td></tr>';
+    return;
+  }
+  cachedProjects.forEach(p => {
+    const tr = document.createElement('tr');
+    tr.className = 'hover:bg-slate-50';
+    tr.innerHTML = `
+      <td class="px-4 py-3 font-medium">${esc(p.name)}</td>
+      <td class="px-4 py-3 font-mono text-xs">${esc(p.slug)}</td>
+      <td class="px-4 py-3 text-xs">${esc(p.rera_number)}</td>
+      <td class="px-4 py-3">${p.is_active ? '✓' : '✗'}</td>
+      <td class="px-4 py-3 text-right text-xs space-x-3">
+        <button class="editProj text-indigo-600 hover:underline" data-id="${p.id}">Edit</button>
+        <button class="delProj text-red-500 hover:underline" data-id="${p.id}">Delete</button>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+  tbody.querySelectorAll('.editProj').forEach(b => b.addEventListener('click', () => openProjectModal(cachedProjects.find(p => p.id === b.dataset.id))));
+  tbody.querySelectorAll('.delProj').forEach(b => b.addEventListener('click', () => deleteProject(b.dataset.id)));
+}
+
+$('newProjectBtn').addEventListener('click', () => openProjectModal(null));
+
+function openProjectModal(p) {
+  $('projectModalTitle').textContent = p ? 'Edit Project' : 'New Project';
+  $('projName').value = p?.name || '';
+  $('projSlug').value = p?.slug || '';
+  $('projRera').value = p?.rera_number || '';
+  $('projFiscal').value = p?.fiscal_year || '01-04-2025-31-03-2026';
+  $('projActive').checked = p ? p.is_active : true;
+  $('projectModalError').classList.add('hidden');
+  $('projectModal').dataset.editId = p?.id || '';
+  $('projectModal').classList.remove('hidden');
+  $('projSlug').dataset.touched = p ? '1' : '';
+}
+
+$('projName').addEventListener('input', e => {
+  if (!$('projSlug').dataset.touched) {
+    $('projSlug').value = e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  }
+});
+$('projSlug').addEventListener('input', e => { e.target.dataset.touched = '1'; });
+
+$('projCancelBtn').addEventListener('click', () => $('projectModal').classList.add('hidden'));
+
+$('projSaveBtn').addEventListener('click', async () => {
+  const name = $('projName').value.trim();
+  const slug = $('projSlug').value.trim().toLowerCase();
+  const rera = $('projRera').value.trim();
+  const fiscal = $('projFiscal').value.trim();
+  const active = $('projActive').checked;
+  const editId = $('projectModal').dataset.editId;
+  const errEl = $('projectModalError');
+  errEl.classList.add('hidden');
+  if (!name || !slug || !rera) { errEl.textContent = 'Name, slug, RERA required'; errEl.classList.remove('hidden'); return; }
+  const btn = $('projSaveBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    if (editId) {
+      const { error } = await db.from('projects').update({ name, slug, rera_number: rera, fiscal_year: fiscal, is_active: active }).eq('id', editId);
+      if (error) throw error;
+    } else {
+      const { error } = await db.from('projects').insert({ name, slug, rera_number: rera, fiscal_year: fiscal, is_active: active, created_by: currentUser.id });
+      if (error) throw error;
+    }
+    $('projectModal').classList.add('hidden');
+    toast('Project saved', 'success');
+    await loadProjects();
+  } catch (e) {
+    errEl.textContent = e.message; errEl.classList.remove('hidden');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Save';
+  }
+});
+
+async function deleteProject(id) {
+  const proj = cachedProjects.find(p => p.id === id);
+  if (!confirm(`Delete project "${proj.name}"?`)) return;
+  const { error } = await db.from('projects').delete().eq('id', id);
+  if (error) { toast(error.message, 'error'); return; }
+  toast('Deleted', 'success');
+  await loadProjects();
+}
+
+// ===== APPLICATIONS =====
+async function loadApplications() {
+  const { data, error } = await db.from('applications')
+    .select('*, project:projects(name, slug, rera_number, fiscal_year), applicants(*)')
+    .order('updated_at', { ascending: false }).limit(500);
+  if (error) { toast('Load apps: ' + error.message, 'error'); return; }
+  cachedApps = data || [];
+  renderApplications();
+}
+
+function renderApplications() {
+  const tbody = $('appsTable');
+  const search = $('appsSearch').value.toLowerCase();
+  const status = $('appsStatusFilter').value;
+  let filtered = cachedApps;
+  if (status) filtered = filtered.filter(a => a.status === status);
+  if (search) filtered = filtered.filter(a => {
+    const hay = [a.unit_number, a.mobile, a.email, ...(a.applicants||[]).flatMap(x => [x.first_name, x.last_name, x.pan, x.aadhar])].filter(Boolean).join(' ').toLowerCase();
+    return hay.includes(search);
+  });
+  $('appsCount').textContent = `${cachedApps.length} total · ${selectedApps.size} selected`;
+  tbody.innerHTML = '';
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="p-12 text-center text-slate-400">No applications</td></tr>';
+    return;
+  }
+  filtered.forEach(a => {
+    const primary = (a.applicants || []).find(x => x.is_primary) || (a.applicants || [])[0] || {};
+    const name = [primary.salutation, primary.first_name, primary.middle_name, primary.last_name].filter(Boolean).join(' ') || '—';
+    const statusClass = { pending: 'bg-amber-100 text-amber-700', complete: 'bg-emerald-100 text-emerald-700', exported: 'bg-slate-200 text-slate-700' }[a.status] || 'bg-slate-100';
+    const tr = document.createElement('tr');
+    tr.className = 'hover:bg-slate-50 cursor-pointer';
+    tr.dataset.id = a.id;
+    tr.innerHTML = `
+      <td class="px-4 py-3" data-noclick><input type="checkbox" class="appCheck" data-id="${a.id}" ${selectedApps.has(a.id)?'checked':''} /></td>
+      <td class="px-4 py-3"><div class="font-medium">${esc(a.project?.name || '—')}</div><div class="text-xs text-slate-500">${esc(a.unit_number || 'No unit')}</div></td>
+      <td class="px-4 py-3">${esc(name)}</td>
+      <td class="px-4 py-3 text-slate-600">${esc(a.mobile || '')}</td>
+      <td class="px-4 py-3"><span class="inline-block px-2 py-0.5 rounded text-xs ${statusClass}">${a.status}</span></td>
+      <td class="px-4 py-3 text-xs text-slate-500">${new Date(a.updated_at).toLocaleDateString()}</td>
+      <td class="px-4 py-3 text-right text-xs"><span class="text-indigo-600">Edit →</span></td>`;
+    tr.addEventListener('click', e => {
+      if (e.target.closest('[data-noclick]')) return;
+      openEdit(a.id);
+    });
+    tbody.appendChild(tr);
+  });
+  tbody.querySelectorAll('.appCheck').forEach(cb => cb.addEventListener('change', e => {
+    if (e.target.checked) selectedApps.add(e.target.dataset.id); else selectedApps.delete(e.target.dataset.id);
+    $('appsCount').textContent = `${cachedApps.length} total · ${selectedApps.size} selected`;
+  }));
+}
+
+$('appsSearch').addEventListener('input', renderApplications);
+$('appsStatusFilter').addEventListener('change', renderApplications);
+
+$('newAppBtn').addEventListener('click', async () => {
+  if (!cachedProjects.length) { toast('Create a project first', 'error'); showView('projects'); return; }
+  let project;
+  if (cachedProjects.length === 1) project = cachedProjects[0];
+  else {
+    const list = cachedProjects.map((p,i) => `${i+1}. ${p.name}`).join('\n');
+    const idx = prompt('Select project number:\n\n' + list);
+    if (!idx) return;
+    project = cachedProjects[parseInt(idx) - 1];
+    if (!project) return toast('Invalid choice', 'error');
+  }
+  const { data, error } = await db.from('applications')
+    .insert({ project_id: project.id, source: 'operator', status: 'pending', created_by: currentUser.id })
+    .select().single();
+  if (error) { toast(error.message, 'error'); return; }
+  await db.from('applicants').insert({
+    application_id: data.id, is_primary: true, display_seq: 1, salutation: 'Mr.'
+  });
+  await loadApplications();
+  openEdit(data.id);
+});
+
+// ===== EDIT VIEW =====
+async function openEdit(id) {
+  const { data, error } = await db.from('applications')
+    .select('*, project:projects(*), applicants(*)').eq('id', id).single();
+  if (error) { toast(error.message, 'error'); return; }
+  data.applicants = (data.applicants || []).sort((a,b) => (a.display_seq||0) - (b.display_seq||0));
+  if (!data.applicants.length) data.applicants = [blankApplicant(1)];
+  currentApp = data;
+  $('editTitle').textContent = `Application — ${data.project?.name || ''}`;
+  $('editSubtitle').textContent = `RERA ${data.project?.rera_number || ''} · ${data.status} · from ${data.source}`;
+
+  document.querySelectorAll('.appField').forEach(el => {
+    const f = el.dataset.field;
+    if (f) el.value = data[f] ?? '';
+  });
+
+  renderApplicantsEditor();
+  switchEditTab('project');
+  showView('edit');
+}
+
+function blankApplicant(seq) {
+  return { is_primary: seq === 1, display_seq: seq, salutation: 'Mr.', first_name: '', middle_name: '', last_name: '', dob: '', gender: '', relationship: 'S/o', relative_name: '', pan: '', aadhar: '' };
+}
+
+function renderApplicantsEditor() {
+  const cont = $('applicantsContainer');
+  cont.innerHTML = '';
+  currentApp.applicants.forEach((a, i) => {
+    const card = document.createElement('div');
+    card.className = 'bg-white rounded-xl border border-slate-200 p-6';
+    card.innerHTML = `
+      <div class="flex items-center justify-between mb-4">
+        <h4 class="font-semibold">${i === 0 ? '🟢 Primary Applicant' : '👥 Co-Applicant ' + i}</h4>
+        ${i > 0 ? `<button class="rmAppl text-red-500 text-sm" data-i="${i}">Remove</button>` : ''}
+      </div>
+      <div class="grid grid-cols-4 gap-3 mb-4">
+        <div><label class="block text-xs font-medium text-slate-600 mb-1">Salutation</label>
+          <select class="aplF w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" data-i="${i}" data-k="salutation">
+            ${['Mr.','Ms.','Mrs.','Dr.'].map(s => `<option ${a.salutation===s?'selected':''}>${s}</option>`).join('')}
+          </select></div>
+        <div><label class="block text-xs font-medium text-slate-600 mb-1">First Name *</label>
+          <input class="aplF w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" data-i="${i}" data-k="first_name" value="${esc(a.first_name||'')}" /></div>
+        <div><label class="block text-xs font-medium text-slate-600 mb-1">Middle</label>
+          <input class="aplF w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" data-i="${i}" data-k="middle_name" value="${esc(a.middle_name||'')}" /></div>
+        <div><label class="block text-xs font-medium text-slate-600 mb-1">Last Name</label>
+          <input class="aplF w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" data-i="${i}" data-k="last_name" value="${esc(a.last_name||'')}" /></div>
+        <div><label class="block text-xs font-medium text-slate-600 mb-1">DOB</label>
+          <input type="date" class="aplF w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" data-i="${i}" data-k="dob" value="${a.dob||''}" /></div>
+        <div><label class="block text-xs font-medium text-slate-600 mb-1">Gender</label>
+          <select class="aplF w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" data-i="${i}" data-k="gender">
+            <option value="">—</option>${['Male','Female','Other'].map(g => `<option ${a.gender===g?'selected':''}>${g}</option>`).join('')}
+          </select></div>
+        <div><label class="block text-xs font-medium text-slate-600 mb-1">Relationship</label>
+          <select class="aplF w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" data-i="${i}" data-k="relationship">
+            ${['S/o','D/o','W/o','H/o'].map(r => `<option ${a.relationship===r?'selected':''}>${r}</option>`).join('')}
+          </select></div>
+        <div><label class="block text-xs font-medium text-slate-600 mb-1">Father/Spouse</label>
+          <input class="aplF w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" data-i="${i}" data-k="relative_name" value="${esc(a.relative_name||'')}" /></div>
+        <div class="col-span-2"><label class="block text-xs font-medium text-slate-600 mb-1">PAN</label>
+          <input class="aplF w-full border border-slate-300 rounded-lg px-3 py-2 text-sm uppercase" data-i="${i}" data-k="pan" value="${esc(a.pan||'')}" /></div>
+        <div class="col-span-2"><label class="block text-xs font-medium text-slate-600 mb-1">Aadhaar</label>
+          <input class="aplF w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" data-i="${i}" data-k="aadhar" value="${esc(a.aadhar||'')}" /></div>
+      </div>
+      <div class="border-t pt-4">
+        <div class="text-xs font-semibold text-slate-700 uppercase mb-2">Documents</div>
+        <div class="grid grid-cols-3 gap-3">
+          ${['photo','aadhar','pan'].map(k => `
+            <div class="doc-thumb ${a[k+'_path']?'has-file':''}" data-uploadi="${i}" data-uploadk="${k}">
+              ${a[k+'_path']
+                ? `<div class="text-emerald-700 font-medium text-sm">📄 Uploaded</div>
+                   <button class="vw text-xs text-indigo-600 hover:underline mt-1" data-path="${esc(a[k+'_path'])}">View</button>
+                   <button class="rp text-xs text-slate-500 hover:underline mt-1" data-i="${i}" data-k="${k}">Replace</button>`
+                : `<div class="text-slate-400 text-sm">📎 ${k === 'pan' ? 'PAN Card' : k === 'aadhar' ? 'Aadhaar' : 'Photo'}</div>`}
+            </div>`).join('')}
+        </div>
+      </div>`;
+    cont.appendChild(card);
+  });
+
+  cont.querySelectorAll('.aplF').forEach(el => {
+    el.addEventListener('input', e => {
+      currentApp.applicants[+e.target.dataset.i][e.target.dataset.k] = e.target.value;
+    });
+  });
+  cont.querySelectorAll('.rmAppl').forEach(b => b.addEventListener('click', () => {
+    currentApp.applicants.splice(+b.dataset.i, 1);
+    currentApp.applicants.forEach((a,i) => { a.is_primary = i === 0; a.display_seq = i + 1; });
+    renderApplicantsEditor();
+  }));
+  cont.querySelectorAll('.doc-thumb[data-uploadi]').forEach(el => {
+    el.addEventListener('click', e => {
+      if (e.target.closest('.vw') || e.target.closest('.rp')) return;
+      if (el.classList.contains('has-file')) return;
+      uploadDoc(+el.dataset.uploadi, el.dataset.uploadk);
+    });
+  });
+  cont.querySelectorAll('.vw').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); viewDoc(b.dataset.path); }));
+  cont.querySelectorAll('.rp').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); uploadDoc(+b.dataset.i, b.dataset.k); }));
+}
+
+$('addApplicantBtn').addEventListener('click', () => {
+  if (currentApp.applicants.length >= 3) { toast('Max 3 applicants', 'error'); return; }
+  currentApp.applicants.push(blankApplicant(currentApp.applicants.length + 1));
+  renderApplicantsEditor();
+});
+
+document.querySelectorAll('.edit-tab').forEach(t => t.addEventListener('click', () => switchEditTab(t.dataset.edittab)));
+function switchEditTab(name) {
+  document.querySelectorAll('.edit-tab').forEach(t => {
+    t.classList.toggle('tab-active', t.dataset.edittab === name);
+    t.classList.toggle('text-slate-500', t.dataset.edittab !== name);
+  });
+  document.querySelectorAll('.edit-tab-panel').forEach(p => p.classList.add('hidden'));
+  $('editTab-' + name).classList.remove('hidden');
+}
+
+$('backBtn').addEventListener('click', () => { currentApp = null; showView('apps'); loadApplications(); });
+
+document.querySelectorAll('.appField').forEach(el => {
+  el.addEventListener('input', e => {
+    if (!currentApp) return;
+    currentApp[e.target.dataset.field] = e.target.value;
+  });
+});
+
+async function uploadDoc(applicantIdx, kind) {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'image/*,application/pdf';
+  inp.onchange = async () => {
+    const file = inp.files[0]; if (!file) return;
+    const cfg = getConfig();
+    const path = `${currentApp.id}/applicant_${applicantIdx+1}_${kind}_${Date.now()}_${file.name.replace(/\s+/g,'_')}`;
+    toast('Uploading...', 'info');
+    const { error } = await db.storage.from(cfg.bucket).upload(path, file);
+    if (error) { toast('Upload: ' + error.message, 'error'); return; }
+    currentApp.applicants[applicantIdx][kind + '_path'] = path;
+    const aid = currentApp.applicants[applicantIdx].id;
+    if (aid) {
+      await db.from('applicants').update({ [kind + '_path']: path }).eq('id', aid);
+    }
+    renderApplicantsEditor();
+    toast('Uploaded', 'success');
+  };
+  inp.click();
+}
+
+async function viewDoc(path) {
+  const cfg = getConfig();
+  const { data, error } = await db.storage.from(cfg.bucket).createSignedUrl(path, 600);
+  if (error) { toast(error.message, 'error'); return; }
+  window.open(data.signedUrl, '_blank');
+}
+
+// ===== SAVE / FINALIZE / EXPORT =====
+$('saveAppBtn').addEventListener('click', () => saveApp(true));
+$('finalizeBtn').addEventListener('click', async () => {
+  if (!confirm('Mark this application as Complete?')) return;
+  const ok = await saveApp(false);
+  if (!ok) return;
+  const { error } = await db.from('applications').update({ status: 'complete', reviewed_by: currentUser.id }).eq('id', currentApp.id);
+  if (error) { toast(error.message, 'error'); return; }
+  toast('Marked complete', 'success');
+  showView('apps'); await loadApplications();
+});
+
+async function saveApp(showToast = true) {
+  if (!currentApp) return false;
+  const fields = {};
+  ['unit_number','document_date','entry_type','broker_name','remarks','addr_line1','addr_line2','addr_line3',
+   'city','state','country','postal_code','mobile','email','phone','payment_amount','payment_mode',
+   'payment_ref','payment_bank','payment_date','receipt_no'].forEach(f => fields[f] = currentApp[f] || null);
+
+  const { error: aErr } = await db.from('applications').update(fields).eq('id', currentApp.id);
+  if (aErr) { toast(aErr.message, 'error'); return false; }
+
+  await db.from('applicants').delete().eq('application_id', currentApp.id);
+  const rows = currentApp.applicants.map((a, i) => ({
+    application_id: currentApp.id, is_primary: i === 0, display_seq: i + 1,
+    salutation: a.salutation, first_name: a.first_name, middle_name: a.middle_name, last_name: a.last_name,
+    dob: a.dob || null, gender: a.gender, relationship: a.relationship, relative_name: a.relative_name,
+    pan: a.pan, aadhar: a.aadhar, photo_path: a.photo_path, aadhar_path: a.aadhar_path, pan_path: a.pan_path
+  }));
+  if (rows.length) {
+    const { error } = await db.from('applicants').insert(rows);
+    if (error) { toast(error.message, 'error'); return false; }
+  }
+  if (showToast) toast('Saved', 'success');
+  return true;
+}
+
+$('exportSingleBtn').addEventListener('click', async () => {
+  const ok = await saveApp(false);
+  if (!ok) return;
+  await exportApps([currentApp.id]);
+});
+
+$('bulkExportBtn').addEventListener('click', async () => {
+  if (!selectedApps.size) { toast('Select applications first', 'error'); return; }
+  await exportApps([...selectedApps]);
+});
+
+async function exportApps(ids) {
+  const { data: apps, error } = await db.from('applications')
+    .select('*, project:projects(*), applicants(*)').in('id', ids);
+  if (error) { toast(error.message, 'error'); return; }
+  apps.forEach(a => a.applicants?.sort((x,y) => (x.display_seq||0) - (y.display_seq||0)));
+  const buf = buildFarvisionXlsx(apps);
+  const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `Farvision_${apps.length}apps_${new Date().toISOString().slice(0,10)}.xlsx`;
+  a.click();
+  URL.revokeObjectURL(url);
+  await db.from('applications').update({ status: 'exported' }).in('id', ids);
+  toast(`Exported ${apps.length}`, 'success');
+  selectedApps.clear();
+  await loadApplications();
+}
+
+// ===== FARVISION XLSX BUILDER =====
+function dateToExcelSerial(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  const epoch = new Date(Date.UTC(1899, 11, 30));
+  return Math.floor((d - epoch) / 86400000);
+}
+
+function buildFarvisionXlsx(apps) {
+  const bookingRows = [], applicantRows = [], addressRows = [], emailRows = [], phoneRows = [], mobileRows = [], faxRows = [];
+  apps.forEach((app, i) => {
+    const ref = i + 1;
+    const b = {
+      ImportLinkRefCode: ref,
+      FiscalYear: app.project?.fiscal_year || '01-04-2025-31-03-2026',
+      'Business Unit': app.project?.name || '',
+      EntryTypes: app.entry_type || 'FLAT APPLICATION',
+      PrefixType: app.entry_type || 'FLAT APPLICATION',
+      DocumentNo: '', GSTIN: '',
+      DocumentDate: dateToExcelSerial(app.document_date),
+      Remarks: app.remarks || '', Opportunity: ''
+    };
+    for (let u = 1; u <= 25; u++) if (u !== 16) b['UDF_' + u] = '';
+    b['UDF_24'] = app.unit_number ? '- ' + app.unit_number : '';
+    b['UDF_25'] = app.broker_name || '';
+    bookingRows.push(b);
+
+    (app.applicants || []).forEach((a, ai) => {
+      applicantRows.push({
+        ImportLinkRefCode: ref,
+        'Detail Link Ref Code': ai === 0 ? ref : `${ref}.${ai+1}`,
+        IsPrimary: a.is_primary ? 'TRUE' : 'FALSE',
+        Salutation: a.salutation || '',
+        'First Name': a.first_name || '', MiddleName: a.middle_name || '', LastName: a.last_name || '',
+        'Date of Birth': a.dob ? dateToExcelSerial(a.dob) : '',
+        'Date of Anniversary': '',
+        Gender: a.gender || '', Relationship: a.relationship || '', RelativeName: a.relative_name || '',
+        RelativeType: '',
+        CoApplicants: ai === 0 ? (app.applicants.length - 1) : '',
+        DisplaySeqNo: ai + 1,
+        PAN: a.pan || '', AadharNo: a.aadhar || '', Image: ''
+      });
+    });
+
+    addressRows.push({
+      ImportLinkRefCode: ref, 'Detail Link Ref Code': ref,
+      ReferenceOf: 'Customer', AddressType: 'Correspondence',
+      AddressLine1: app.addr_line1 || '', AddressLine2: app.addr_line2 || '', AddressLine3: app.addr_line3 || '',
+      City: app.city || '', State: app.state || '', Country: app.country || 'India',
+      'Postal Code': app.postal_code || ''
+    });
+
+    const commRow = (type, val) => ({
+      ImportLinkRefCode: ref, 'Detail Link Ref Code': ref,
+      ReferenceOf: 'Customer', AddressType: 'Correspondence',
+      CommType: type, Value: val, IsPrimary: 'TRUE'
+    });
+    if (app.email) emailRows.push(commRow('Email', app.email));
+    if (app.phone) phoneRows.push(commRow('Phone', app.phone));
+    if (app.mobile) mobileRows.push(commRow('Mobile', app.mobile));
+  });
+
+  const wb = XLSX.utils.book_new();
+  const bookingHeader = ['ImportLinkRefCode','FiscalYear','Business Unit','EntryTypes','PrefixType','DocumentNo','GSTIN','DocumentDate','Remarks','Opportunity',
+    ...Array.from({length:15},(_,k)=>'UDF_'+(k+1)), 'UDF_17','UDF_18','UDF_19','UDF_20','UDF_21','UDF_22','UDF_23','UDF_24','UDF_25'];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(bookingRows, { header: bookingHeader }), 'BookingApplication');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(applicantRows, {
+    header: ['ImportLinkRefCode','Detail Link Ref Code','IsPrimary','Salutation','First Name','MiddleName','LastName',
+      'Date of Birth','Date of Anniversary','Gender','Relationship','RelativeName','RelativeType','CoApplicants','DisplaySeqNo','PAN','AadharNo','Image']
+  }), 'Applicant');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(addressRows, {
+    header: ['ImportLinkRefCode','Detail Link Ref Code','ReferenceOf','AddressType','AddressLine1','AddressLine2','AddressLine3','City','State','Country','Postal Code']
+  }), 'Addresses');
+  const ch = ['ImportLinkRefCode','Detail Link Ref Code','ReferenceOf','AddressType','CommType','Value','IsPrimary'];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(emailRows, { header: ch }), 'Email');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(phoneRows, { header: ch }), 'Phone');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(mobileRows, { header: ch }), 'MobilePhone');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(faxRows, { header: ['ImportLinkRefCode','Detail Link Ref Code','ReferenceOf','AddressType','CommType','Value'] }), 'Fax');
+  return XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
+}
+
+// ===== START =====
+init();
+</script>
+</body>
+</html>
