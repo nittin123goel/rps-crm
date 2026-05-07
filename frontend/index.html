@@ -19,9 +19,9 @@
 <!-- ========== CONFIG ========== -->
 <script>
   // ============================================================================
-  // CONFIGURATION â€” Set these once before deploying.
+  // CONFIGURATION Ã¢â‚¬â€ Set these once before deploying.
   // SUPABASE_URL: your project URL
-  // SUPABASE_ANON_KEY: anon public key (safe to expose â€” anon key is meant for browsers)
+  // SUPABASE_ANON_KEY: anon public key (safe to expose Ã¢â‚¬â€ anon key is meant for browsers)
   // STORAGE_BUCKET: bucket name where customer documents go
   // PROJECT_SLUG: which project this form is for
   //   - if blank, the form will read ?slug=xxx from the URL (one form, many projects)
@@ -29,8 +29,7 @@
   // ============================================================================
   window.RPS_CONFIG = {
     SUPABASE_URL: 'https://crxkbpzoasxhegyisjpn.supabase.co',
-    SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNyeGticHpvYXN4aGVneWlzanBuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNTY0NTEsImV4cCI6MjA5MzYzMjQ1MX0.1AxzSelp4encV6e65huvRSlc8X7azGSJGcWsgcBUeds
-',
+    SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNyeGticHpvYXN4aGVneWlzanBuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNTY0NTEsImV4cCI6MjA5MzYzMjQ1MX0.1AxzSelp4encV6e65huvRSlc8X7azGSJGcWsgcBUeds',
     STORAGE_BUCKET: 'kyc',
     PROJECT_SLUG: ''  // leave empty to use ?slug= in URL, or set e.g. 'rps-12th-avenue'
   };
@@ -38,13 +37,13 @@
 
 <!-- ========== LOADING SCREEN ========== -->
 <div id="loadingScreen" class="min-h-screen flex items-center justify-center">
-  <div class="text-slate-500 text-sm">Loadingâ€¦</div>
+  <div class="text-slate-500 text-sm">LoadingÃ¢â‚¬Â¦</div>
 </div>
 
 <!-- ========== ERROR SCREEN ========== -->
 <div id="errorScreen" class="hidden min-h-screen flex items-center justify-center p-4">
   <div class="bg-white rounded-2xl shadow-sm border border-red-200 p-8 max-w-md w-full text-center">
-    <div class="text-5xl mb-3">âš ï¸</div>
+    <div class="text-5xl mb-3">Ã¢Å¡Â Ã¯Â¸Â</div>
     <h2 class="text-xl font-semibold text-slate-900 mb-2">Form Unavailable</h2>
     <p id="errorMessage" class="text-slate-600 text-sm"></p>
   </div>
@@ -53,7 +52,7 @@
 <!-- ========== SUCCESS SCREEN ========== -->
 <div id="successScreen" class="hidden min-h-screen flex items-center justify-center p-4">
   <div class="bg-white rounded-2xl shadow-sm border border-emerald-200 p-8 max-w-md w-full text-center">
-    <div class="text-emerald-600 text-6xl mb-3">âœ“</div>
+    <div class="text-emerald-600 text-6xl mb-3">Ã¢Å“â€œ</div>
     <h2 class="text-2xl font-semibold text-slate-900 mb-2">Thank you!</h2>
     <p class="text-slate-600 mb-2">Your application for <b id="successProject"></b> has been received.</p>
     <p class="text-slate-500 text-sm">Our team will review it and reach out to you shortly on the mobile number you provided.</p>
@@ -73,7 +72,7 @@
           <p id="projectReraHeader" class="text-sm text-slate-500"></p>
         </div>
       </div>
-      <p class="text-slate-700 mt-3 text-sm">Application Form â€” fill in your details and upload your KYC documents below.</p>
+      <p class="text-slate-700 mt-3 text-sm">Application Form Ã¢â‚¬â€ fill in your details and upload your KYC documents below.</p>
     </div>
   </header>
 
@@ -211,7 +210,7 @@ async function init() {
   // Render
   $('projectNameHeader').textContent = project.name;
   $('projectReraHeader').textContent = 'RERA: ' + project.rera_number;
-  document.title = project.name + ' â€” Application Form';
+  document.title = project.name + ' Ã¢â‚¬â€ Application Form';
   applicants = [blankApplicant()];
   renderApplicants();
   showScreen('formScreen');
@@ -258,7 +257,7 @@ function renderApplicants() {
           <input type="date" class="aF w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" data-i="${i}" data-k="dob" value="${a.dob}" /></div>
         <div><label class="block text-xs font-medium text-slate-600 mb-1">Gender</label>
           <select class="aF w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" data-i="${i}" data-k="gender">
-            <option value="">â€”</option>${['Male','Female','Other'].map(g => `<option ${a.gender===g?'selected':''}>${g}</option>`).join('')}
+            <option value="">Ã¢â‚¬â€</option>${['Male','Female','Other'].map(g => `<option ${a.gender===g?'selected':''}>${g}</option>`).join('')}
           </select></div>
         <div><label class="block text-xs font-medium text-slate-600 mb-1">Relationship</label>
           <select class="aF w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" data-i="${i}" data-k="relationship">
@@ -277,7 +276,7 @@ function renderApplicants() {
           ${['photo','aadhar','pan'].map(k => `
             <label class="file-input ${a.files[k] ? 'has-file' : ''}">
               <div class="text-xs font-medium text-slate-700 mb-1">${k === 'pan' ? 'PAN Card' : k === 'aadhar' ? 'Aadhaar Card' : 'Photograph'}</div>
-              <div class="text-xs text-slate-500 truncate">${a.files[k] ? 'âœ“ ' + esc(a.files[k].name) : 'ðŸ“Ž Choose file'}</div>
+              <div class="text-xs text-slate-500 truncate">${a.files[k] ? 'Ã¢Å“â€œ ' + esc(a.files[k].name) : 'Ã°Å¸â€œÅ½ Choose file'}</div>
               <input type="file" class="hidden fileF" data-i="${i}" data-k="${k}" accept="image/*,application/pdf" />
             </label>`).join('')}
         </div>
@@ -328,7 +327,7 @@ $('submitBtn').addEventListener('click', async () => {
   if (!$('mobile').value.trim()) { return showFormError('Mobile number is required'); }
 
   const btn = $('submitBtn');
-  btn.disabled = true; btn.textContent = 'Submittingâ€¦';
+  btn.disabled = true; btn.textContent = 'SubmittingÃ¢â‚¬Â¦';
 
   try {
     // 1. Create application row
@@ -355,7 +354,7 @@ $('submitBtn').addEventListener('click', async () => {
     // 2. Upload files for each applicant + create applicant rows
     for (let i = 0; i < applicants.length; i++) {
       const a = applicants[i];
-      btn.textContent = `Uploading documents (${i+1}/${applicants.length})â€¦`;
+      btn.textContent = `Uploading documents (${i+1}/${applicants.length})Ã¢â‚¬Â¦`;
 
       const paths = {};
       for (const kind of ['photo','aadhar','pan']) {
