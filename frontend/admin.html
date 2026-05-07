@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>RPS CRM</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/@db/db-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
@@ -26,7 +26,7 @@
     <h1 class="text-xl font-bold text-slate-900 mb-2">First-time Setup</h1>
     <p class="text-sm text-slate-500 mb-6">Paste your Supabase credentials. Stored in browser only.</p>
     <label class="block text-xs font-medium text-slate-600 mb-1">Supabase URL</label>
-    <input id="cfgUrl" type="text" placeholder="https://xxxxx.db.co" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm mb-3" />
+    <input id="cfgUrl" type="text" placeholder="https://xxxxx.supabase.co" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm mb-3" />
     <label class="block text-xs font-medium text-slate-600 mb-1">Supabase anon key</label>
     <textarea id="cfgKey" placeholder="eyJhbGci..." rows="3" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm mb-3 font-mono text-xs"></textarea>
     <label class="block text-xs font-medium text-slate-600 mb-1">Storage bucket name</label>
@@ -348,7 +348,7 @@ $('loginBtn').addEventListener('click', async () => {
   try {
     const { data, error } = await db.auth.signInWithPassword({ email, password });
     if (error) throw error;
-    if (!data.session) throw new Error('No session created — check email confirmation in db');
+    if (!data.session) throw new Error('No session created — check email confirmation in Supabase');
     await afterLogin();
   } catch (e) {
     errEl.textContent = e.message || 'Login failed';
@@ -372,7 +372,7 @@ async function afterLogin() {
       .from('profiles').select('*').eq('id', user.id).maybeSingle();
     if (error) throw error;
     if (!profile) {
-      $('loginError').textContent = 'Profile not found. Run schema.sql in db first.';
+      $('loginError').textContent = 'Profile not found. Run schema.sql in Supabase first.';
       $('loginError').classList.remove('hidden');
       showScreen('loginScreen');
       return;
