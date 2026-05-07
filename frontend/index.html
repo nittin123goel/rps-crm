@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
@@ -18,29 +18,20 @@
 
 <!-- ========== CONFIG ========== -->
 <script>
-  // ============================================================================
-  // CONFIGURATION — Set these once before deploying.
-  // SUPABASE_URL: your project URL
-  // SUPABASE_ANON_KEY: anon public key (safe to expose — anon key is meant for browsers)
-  // STORAGE_BUCKET: bucket name where customer documents go
-  // PROJECT_SLUG: which project this form is for
-  //   - if blank, the form will read ?slug=xxx from the URL (one form, many projects)
-  //   - if set to a specific slug, this form is dedicated to ONE project
-  // ============================================================================
   window.RPS_CONFIG = {
     SUPABASE_URL: 'https://crxkbpzoasxhegyisjpn.supabase.co',
     SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNyeGticHpvYXN4aGVneWlzanBuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNTY0NTEsImV4cCI6MjA5MzYzMjQ1MX0.1AxzSelp4encV6e65huvRSlc8X7azGSJGcWsgcBUeds',
     STORAGE_BUCKET: 'kyc',
-    PROJECT_SLUG: ''  // leave empty to use ?slug= in URL, or set e.g. 'rps-12th-avenue'
+    PROJECT_SLUG: ''
   };
 </script>
 
-<!-- ========== LOADING SCREEN ========== -->
+<!-- LOADING -->
 <div id="loadingScreen" class="min-h-screen flex items-center justify-center">
   <div class="text-slate-500 text-sm">Loading…</div>
 </div>
 
-<!-- ========== ERROR SCREEN ========== -->
+<!-- ERROR -->
 <div id="errorScreen" class="hidden min-h-screen flex items-center justify-center p-4">
   <div class="bg-white rounded-2xl shadow-sm border border-red-200 p-8 max-w-md w-full text-center">
     <div class="text-5xl mb-3">⚠️</div>
@@ -49,7 +40,7 @@
   </div>
 </div>
 
-<!-- ========== SUCCESS SCREEN ========== -->
+<!-- SUCCESS -->
 <div id="successScreen" class="hidden min-h-screen flex items-center justify-center p-4">
   <div class="bg-white rounded-2xl shadow-sm border border-emerald-200 p-8 max-w-md w-full text-center">
     <div class="text-emerald-600 text-6xl mb-3">✓</div>
@@ -60,9 +51,8 @@
   </div>
 </div>
 
-<!-- ========== MAIN FORM ========== -->
+<!-- MAIN FORM -->
 <div id="formScreen" class="hidden">
-  <!-- Header -->
   <header class="bg-white border-b border-slate-200">
     <div class="max-w-3xl mx-auto px-6 py-6">
       <div class="flex items-center gap-3">
@@ -98,7 +88,7 @@
 
     <button id="addApplicantBtn" class="text-indigo-600 hover:text-indigo-800 font-medium text-sm">+ Add Co-Applicant</button>
 
-    <!-- Contact (one set per application, used to reach out) -->
+    <!-- Contact (one set per application) -->
     <div class="bg-white rounded-xl border border-slate-200 p-5">
       <h3 class="font-semibold text-slate-900 mb-4">Contact Details</h3>
       <p class="text-xs text-slate-500 mb-3">How we should reach you. (Address details are captured per applicant above.)</p>
@@ -131,13 +121,11 @@
 <script>
 'use strict';
 
-// ===== STATE =====
 let db = null;
 let project = null;
-let applicants = [];   // each: { fields..., files: { photo: File, aadhar: File, pan: File } }
+let applicants = [];
 const cfg = window.RPS_CONFIG;
 
-// ===== UTILITIES =====
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const showScreen = (name) => {
@@ -145,42 +133,24 @@ const showScreen = (name) => {
   $(name).classList.remove('hidden');
 };
 
-// ===== INIT =====
 async function init() {
-  // Validate config
   if (!cfg.SUPABASE_URL || cfg.SUPABASE_ANON_KEY === 'PASTE_YOUR_ANON_KEY_HERE') {
     showError('This form has not been configured yet. Please contact the administrator.');
     return;
   }
-
-  // Get project slug
   const slug = cfg.PROJECT_SLUG || new URLSearchParams(location.search).get('slug');
-  if (!slug) {
-    showError('No project specified. Please use the link provided to you.');
-    return;
-  }
-
-  // Initialize Supabase
+  if (!slug) { showError('No project specified. Please use the link provided to you.'); return; }
   try {
     db = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
-  } catch (e) {
-    showError('Configuration error: ' + e.message);
-    return;
-  }
-
-  // Fetch project
+  } catch (e) { showError('Configuration error: ' + e.message); return; }
   try {
     const { data, error } = await db.from('projects').select('id, name, rera_number, is_active').eq('slug', slug).maybeSingle();
     if (error) throw error;
     if (!data) { showError('Project not found. Please check the link.'); return; }
     if (!data.is_active) { showError('This project is no longer accepting new applications.'); return; }
     project = data;
-  } catch (e) {
-    showError('Could not load project: ' + e.message);
-    return;
-  }
+  } catch (e) { showError('Could not load project: ' + e.message); return; }
 
-  // Render
   $('projectNameHeader').textContent = project.name;
   $('projectReraHeader').textContent = 'RERA: ' + project.rera_number;
   document.title = project.name + ' — Application Form';
@@ -194,7 +164,6 @@ function showError(msg) {
   showScreen('errorScreen');
 }
 
-// ===== APPLICANTS =====
 function blankApplicant() {
   return {
     salutation: 'Mr.', first_name: '', middle_name: '', last_name: '',
@@ -248,6 +217,7 @@ function renderApplicants() {
         <div class="col-span-2"><label class="block text-xs font-medium text-slate-600 mb-1">Aadhaar Number</label>
           <input class="aF w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" data-i="${i}" data-k="aadhar" value="${esc(a.aadhar)}" placeholder="XXXX XXXX XXXX" /></div>
       </div>
+
       <div class="border-t mt-4 pt-4">
         <div class="text-xs font-semibold text-slate-700 uppercase mb-2">Upload Documents</div>
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -308,13 +278,11 @@ function renderApplicants() {
     cont.appendChild(card);
   });
 
-  // Wire up text/select inputs
   cont.querySelectorAll('.aF').forEach(el => {
     el.addEventListener('input', e => {
       applicants[+e.target.dataset.i][e.target.dataset.k] = e.target.value;
     });
   });
-  // Wire up file inputs
   cont.querySelectorAll('.fileF').forEach(el => {
     el.addEventListener('change', e => {
       const file = e.target.files[0];
@@ -327,12 +295,10 @@ function renderApplicants() {
       renderApplicants();
     });
   });
-  // Wire up remove buttons
   cont.querySelectorAll('.rmA').forEach(b => b.addEventListener('click', () => {
     applicants.splice(+b.dataset.i, 1);
     renderApplicants();
   }));
-  // Wire up "Same as Permanent" checkbox
   cont.querySelectorAll('.sameAddrChk').forEach(cb => {
     cb.addEventListener('change', e => {
       const i = +e.target.dataset.i;
@@ -348,12 +314,10 @@ $('addApplicantBtn').addEventListener('click', () => {
   renderApplicants();
 });
 
-// ===== SUBMIT =====
 $('submitBtn').addEventListener('click', async () => {
   const errEl = $('formError');
   errEl.classList.add('hidden');
 
-  // Validation
   if (!applicants[0].first_name) { return showFormError('Primary applicant first name is required'); }
   if (!applicants[0].perm_addr_line1) { return showFormError('Primary applicant: Permanent Address Line 1 is required'); }
   if (!$('mobile').value.trim()) { return showFormError('Mobile number is required'); }
@@ -362,7 +326,6 @@ $('submitBtn').addEventListener('click', async () => {
   btn.disabled = true; btn.textContent = 'Submitting…';
 
   try {
-    // 1. Create application row (no application-level address; addresses are per-applicant)
     const appData = {
       project_id: project.id,
       unit_number: $('unitNumber').value.trim() || null,
@@ -376,7 +339,6 @@ $('submitBtn').addEventListener('click', async () => {
     const { data: app, error: appErr } = await db.from('applications').insert(appData).select().single();
     if (appErr) throw new Error('Submit failed: ' + appErr.message);
 
-    // 2. Upload files for each applicant + create applicant rows
     for (let i = 0; i < applicants.length; i++) {
       const a = applicants[i];
       btn.textContent = `Uploading documents (${i+1}/${applicants.length})…`;
@@ -392,8 +354,6 @@ $('submitBtn').addEventListener('click', async () => {
         paths[kind + '_path'] = path;
       }
 
-      // Build correspondence fields: if checkbox checked, mirror permanent; else use what was entered
-      const corrSrc = a.corr_same_as_perm ? a : a;  // (we always copy from `a`; choice of fields differs)
       const corrFields = a.corr_same_as_perm ? {
         corr_same_as_perm: true,
         corr_addr_line1: a.perm_addr_line1 || null,
@@ -413,6 +373,7 @@ $('submitBtn').addEventListener('click', async () => {
         corr_postal_code: a.corr_postal_code || null,
         corr_country: a.corr_country || 'India'
       };
+
       const { error: aErr } = await db.from('applicants').insert({
         application_id: app.id,
         is_primary: i === 0,
@@ -434,7 +395,6 @@ $('submitBtn').addEventListener('click', async () => {
       if (aErr) throw new Error('Save applicant ' + (i+1) + ': ' + aErr.message);
     }
 
-    // Success!
     $('successProject').textContent = project.name;
     $('successRef').textContent = 'Reference: ' + app.id.slice(0, 8).toUpperCase();
     showScreen('successScreen');
@@ -452,7 +412,6 @@ function showFormError(msg) {
   errEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
-// ===== START =====
 init();
 </script>
 </body>
